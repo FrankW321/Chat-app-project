@@ -1,14 +1,14 @@
-const express = require('express');
-const app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var db = require('./db');
+const express = require('express'),
+      exphbs = require('express-handlebars'),
+      passport = require('passport'),
+      app = express(),
+      db = require('./db'),
+      indexRoutes = require('./controllers/index.js');
 
 // Passport and passport HTTP basic auth strategy
-var passport = require('passport');
-var Strategy = require('passport-http').BasicStrategy;	
+const Strategy = require('passport-http').BasicStrategy;
 
-passport.use(new Strategy(
+/*passport.use(new Strategy(
   function(username, password, cb) {
     if (username === 'test' && password === 'test55958') {
     	return cb(null, username);
@@ -16,7 +16,8 @@ passport.use(new Strategy(
     	return cb(null, false);
     }
   }
-));
+));*/
+
 
 // DB connection
 var connection = db.connect();
@@ -29,9 +30,15 @@ connection.query('SELECT * FROM users WHERE username="John"', function(err, rows
 
 connection.end();
 
-/*app.use(express.static('public'));*/
 
-app.get('/', 
+app.engine('handlebars', exphbs());
+app.set('view engine', 'handlebars');
+
+/*app.use(express.static(index));*/
+
+app.use('/', indexRoutes);
+
+/*router.get('/', 
 	passport.authenticate('basic', { session: false }),
 	function(req, res){
 	  	res.sendFile(__dirname + '/index.html');
@@ -50,8 +57,10 @@ io.on('connection', function(socket){
     console.log('message: ' + msg);
     io.emit('chat message', msg);
   });
-});
+});*/
 
-http.listen(5555, function(){
+app.listen(5555, function(){
   console.log('listening on *:5555');
 });
+
+//module.exports = io
