@@ -1,50 +1,85 @@
 const express = require('express'),
-	  bodyParser = require('body-parser'),
-	  router = express.Router(),
-	  passport = require('passport'),
-	  app = express(),
-      http = require('http'),
-      server = http.createServer(app),
-	  io = require('socket.io')(server);
-//const server = require('http').Server(app);
-//const io = require('socket.io')(router);
+      exphbs = require('express-handlebars'),
+      bodyParser = require('body-parser'),
+      path = require('path'),
+      passport = require('passport'),
+      app = express(),
+      router = express.Router(),
+      bcrypt = require('bcryptjs'),
+      User = require('../models/user')
 
-router.use(bodyParser.urlencoded({ extended: false }));
-router.use(bodyParser.json());
+router.use(bodyParser.urlencoded({ extended: false }))
+router.use(bodyParser.json())
 
 
-// Passport and passport HTTP basic auth strategy
-const Strategy = require('passport-http').BasicStrategy;
-
-passport.use(new Strategy(
-  function(username, password, cb) {
-    if (username === 'test' && password === 'test55958') {
-    	return cb(null, username);
+function ensureAuthenticated(req, res, next) {
+    if(req.isAuthenticated()) {
+        return next()
     } else {
-    	return cb(null, false);
+        req.flash('danger', 'Please login')
+        return res.redirect('/login')
     }
-  }
-));
+}
 
-router.get('/', 
-	passport.authenticate('basic', { session: false }),
-	(req, res) => {
-		res.render('pages/index');
-	}
-);
 
-io.on('connection', function(socket){
-  console.log('a user connected');
-  socket.on('disconnect', function(){
-    console.log('user disconnected');
-  });
-});
+router.get('/', (req, res) => {
+    /**
+     * Vaate "renderdamine", ehk parsitakse EJS süntaks HTML-iks kokku
+     * ning saadetakse kliendile, kes selle päringu teostas (ehk kes sellele URL-ile läks)
+    */
+    if (req.user) {
+      res.render('private_index', {username: req.user.email})
+    } else {
+      res.render('index')
+    }
+})
 
-io.on('connection', function(socket){
-  socket.on('chat message', function(msg){
-    console.log('message: ' + msg);
-    io.emit('chat message', msg);
-  });
-});
+router.post('/', (req, res, next) => {
+    passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/',
+        failureFlash: true
+    })(req, res, next)
+})
 
-module.exports = router;
+router.get('/logout', (req, res) => {
+    req.logout()
+    req.flash('success', 'You\'ve successfully logged out')
+    return res.redirect('/')
+})
+
+router.get('/register', (req, res) => {
+    res.render('register')
+})
+
+router.post('/register', (req, res) => {
+    let email = req.body.username
+    let password = req.body.password
+    let password2 = req.body.password2
+
+    let newUser = new User({
+        email: email,
+        password: password
+    });
+
+    bcrypt.genSalt(10, function(err, salt) {
+        bcrypt.hash(newUser.password, salt, function(err, hash) {
+            if(err) {
+                console.log(err)
+                return res.redirect('/register')
+            }
+
+            newUser.password = hash
+            newUser.save(function(err) {
+                if(err) {
+                    console.log(err);
+                    return res.redirect('/register')
+                }
+                return res.redirect('/')
+            })
+        })
+    })
+})
+
+
+module.exports = router

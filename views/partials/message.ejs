@@ -1,0 +1,9 @@
+<div class="alerts">
+    <$ Object.keys(messages).forEach(function (type) { $>
+        <$ messages[type].forEach(function (message) { $>
+            <div class="alert alert-<$= type $>">
+                <$= message $>
+            </div>
+        <$ }) $>
+    <$ }) $>
+</div>
