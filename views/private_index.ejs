@@ -1,3 +1,58 @@
-<h1>Congratz you're logged in!</h1>
-<span>Logged in as: <$= username $></span>
-<a href="/logout"><button>Logout</button></a>
+<$ include ./partials/head $>
+
+	<header>
+		<!-- <h1>Congratz you're logged in!</h1> -->
+		<span>Logged in as: <$= username $></span>
+		<a href="/logout"><button>Logout</button></a>
+
+		<$- messages('./partials/message', locals) $>
+	</header>
+
+	<aside>
+		<ul>
+			<li>
+				<img src="http://via.placeholder.com/50/CCCCCC/000000">
+				<span>Name</span>
+				<span>Last message</span>
+			</li>
+
+			<li>
+				<img src="http://via.placeholder.com/50/CCCCCC/000000">
+				<span>Name</span>
+				<span>Last message</span>
+			</li>
+		</ul>
+	</aside>
+
+	<ul id="messages"></ul>
+	<div class="messaging_form_container">
+	  <form action="">
+	      <input id="m" autocomplete="off" />
+	      <button>Send</button>
+	  </form>
+	</div>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+	<script>
+	  $(function() {
+	      var socket = io.connect();
+
+	      socket.on('connect', function(data) {
+	        socket.emit('join', 'Hi from client')
+	      })
+
+	      $('form').submit(function() {
+	          socket.emit('chat message', $('#m').val())
+	          $('#m').val('')
+	          return false
+	      })
+
+	      socket.on('chat message', function(msg) {
+	          $('#messages').append($('<li>').text(msg))
+	      })
+	  })
+	</script>
+
+<$ include ./partials/footer $>

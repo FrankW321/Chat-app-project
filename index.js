@@ -13,7 +13,12 @@ const express = require('express'),
 
 
 // Mongodb database connection
-mongoose.connect('mongodb://localhost/chat')
+const mongoDB = 'mongodb://localhost/chat'
+mongoose.Promise = global.Promise
+mongoose.connect(mongoDB, {
+	useMongoClient: true
+})
+
 let db = mongoose.connection
 
 db.once('open', function() {

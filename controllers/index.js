@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
      * ning saadetakse kliendile, kes selle päringu teostas (ehk kes sellele URL-ile läks)
     */
     if (req.user) {
-      res.render('private_index', {username: req.user.email})
+      res.render('private_index', {username: req.user.username})
     } else {
       res.render('index')
     }
@@ -53,12 +53,15 @@ router.get('/register', (req, res) => {
 })
 
 router.post('/register', (req, res) => {
-    let email = req.body.username
+    let username = req.body.username
     let password = req.body.password
     let password2 = req.body.password2
 
+    console.log(username)
+    console.log(password)
+
     let newUser = new User({
-        email: email,
+        username: username,
         password: password
     });
 
