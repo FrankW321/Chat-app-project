@@ -1,7 +1,6 @@
 <$ include ./partials/head $>
 
 	<header>
-		<!-- <h1>Congratz you're logged in!</h1> -->
 		<span>Logged in as: <$= username $></span>
 		<a href="/logout"><button>Logout</button></a>
 
@@ -10,17 +9,13 @@
 
 	<aside>
 		<ul>
-			<li>
-				<img src="http://via.placeholder.com/50/CCCCCC/000000">
-				<span>Name</span>
-				<span>Last message</span>
-			</li>
-
-			<li>
-				<img src="http://via.placeholder.com/50/CCCCCC/000000">
-				<span>Name</span>
-				<span>Last message</span>
-			</li>
+			<$ users.forEach(function(user) { $>
+				<li>
+					<img src="http://via.placeholder.com/50/CCCCCC/000000">
+					<span><$= user.username $></span>
+					<span>Last message</span>
+				</li>
+			<$ }) $>
 		</ul>
 	</aside>
 

@@ -28,7 +28,22 @@ router.get('/', (req, res) => {
      * ning saadetakse kliendile, kes selle päringu teostas (ehk kes sellele URL-ile läks)
     */
     if (req.user) {
-      res.render('private_index', {username: req.user.username})
+      User.find({}, 'username', function (err, users) {
+        if (err) return handleError(err)
+
+        var usernames = []
+
+        for (var i = 0; i < users.length; i++) {
+          if (users[i].username != req.user.username) {
+            usernames.push({
+              username: users[i].username
+            })
+          }
+        }
+        users = JSON.stringify(usernames)
+        res.render('private_index', {username: req.user.username, users: usernames})
+      })
+
     } else {
       res.render('index')
     }
