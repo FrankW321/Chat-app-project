@@ -82,8 +82,24 @@ io.on('connection', function (socket) {
 	    console.log('user disconnected')
 	})
 
+	socket.on('join', function (data) {
+		socket.join(data.username)		// socket.io room
+		console.log('Created room:'+data.username)
+		socket.to(data.username).emit('chat message', 'hello')
+	})
+
+	socket.on('leave', function (data) {
+		socket.leave(data.username)		// socket.io room
+		console.log('Left room:'+data.username)
+	})
+
 	socket.on('chat message', function(msg){
 	    console.log('message: ' + msg)
 	    io.emit('chat message', msg)
+	})
+
+	socket.on('private message', function(data){
+	    console.log('Private message: ' + data.msg)
+        io.to(data.recipient).emit('private message', data.msg)
 	})
 })

@@ -12,7 +12,7 @@
 			<$ users.forEach(function(user) { $>
 				<li>
 					<img src="http://via.placeholder.com/50/CCCCCC/000000">
-					<span><$= user.username $></span>
+					<span class="username"><$= user.username $></span>
 					<span>Last message</span>
 				</li>
 			<$ }) $>
@@ -21,7 +21,7 @@
 
 	<ul id="messages"></ul>
 	<div class="messaging_form_container">
-	  <form action="">
+	  <form action="javascript:void(0);">
 	      <input id="m" autocomplete="off" />
 	      <button>Send</button>
 	  </form>
@@ -31,23 +31,37 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
 	<script>
-	  $(function() {
-	      var socket = io.connect();
+	    const socket = io()
+	    var clicked_user
 
-	      socket.on('connect', function(data) {
-	        socket.emit('join', 'Hi from client')
-	      })
+	    socket.on('connection', function(socket) {
+		    socket.emit('join', {username: '<$= username $>'})
+	    })
 
-	      $('form').submit(function() {
-	          socket.emit('chat message', $('#m').val())
-	          $('#m').val('')
-	          return false
-	      })
+	    $('form').submit(function() {
+	    	var message = $('#m').val()
+	    	if (clicked_user) {		        
+		    	socket.emit('private message', {msg: message, recipient: clicked_user})
+		    } else {
+		    	socket.emit('chat message', message)
+		    }
+	        $('#m').val('')
+	        return false
+	    })
 
-	      socket.on('chat message', function(msg) {
-	          $('#messages').append($('<li>').text(msg))
-	      })
-	  })
+	    socket.on('chat message', function(msg) {
+	        $('#messages').append($('<li>').text(msg))
+	    })
+
+	    socket.on('private message', function(msg) {
+	        $('#messages').append($('<li>').text(msg))
+	    })
+
+	    $('aside li').on('click', function() {
+			clicked_user = $(this).children('.username').text()
+			socket.emit('leave', {username: '<$= username $>'})
+		  	socket.emit('join', {username: clicked_user})
+		})
 	</script>
 
 <$ include ./partials/footer $>
