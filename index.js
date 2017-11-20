@@ -9,7 +9,7 @@ const express = require('express'),
 	  app = express(),
 	  port = 5555,
 	  server = require('http').Server(app),
-	  io = require('socket.io')(server)
+	  io = require('socket.io')(server, {wsEngine: 'ws'})	// temporarily set websocket engine to ws from default uws beacause of a segmantation fault
 
 
 // Mongodb database connection
@@ -76,21 +76,39 @@ server.listen(port, function (err) {
 	Socket.io
 */
 
+var users = {}
+
 io.on('connection', function (socket) {
 	console.log('User connected')
+
+	socket.on('connected', function(data) {
+		users[data.id] = {'username': data.username}
+		console.log(users)
+	})
+
 	socket.on('disconnect', function() {
 	    console.log('user disconnected')
+	    delete users[socket.id]
 	})
 
 	socket.on('join', function (data) {
-		socket.join(data.username)		// socket.io room
-		console.log('Created room:'+data.username)
+		var sending_user = users[socket.id].username
+		var receiving_user = data.username
+
+		if (sending_user < receiving_user) {
+			socket.join(sending_user + '_-_' + receiving_user)		// socket.io room
+			console.log('Created room: ' + sending_user + '_-_' + receiving_user)
+		} else {
+			socket.join(receiving_user + '_-_' + sending_user)		// socket.io room
+			console.log('Created room: ' + receiving_user + '_-_' + sending_user)
+		}
+
 		socket.to(data.username).emit('chat message', 'hello')
 	})
 
 	socket.on('leave', function (data) {
 		socket.leave(data.username)		// socket.io room
-		console.log('Left room:'+data.username)
+		console.log('Left room: ' + data.username)
 	})
 
 	socket.on('chat message', function(msg){
@@ -99,7 +117,13 @@ io.on('connection', function (socket) {
 	})
 
 	socket.on('private message', function(data){
-	    console.log('Private message: ' + data.msg)
-        io.to(data.recipient).emit('private message', data.msg)
+		console.log(users)
+	    console.log('Private message: from: ' + users[socket.id].username + ' to: ' + data.recipient + ' msg: ' + data.msg)
+
+	    var recipient_id = Object.keys(users).filter(function(id) {
+	    	return users[id].username == data.recipient
+	    })
+
+        io.to(recipient_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].username})
 	})
 })

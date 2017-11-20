@@ -1,10 +1,14 @@
 <$ include ./partials/head $>
 
 	<header>
-		<span>Logged in as: <$= username $></span>
-		<a href="/logout"><button>Logout</button></a>
+		<div class="friends_list_header">
+			<span>Logged in as: <$= username $></span>
+			<a href="/logout"><button>Logout</button></a>
+		</div>
 
-		<$- messages('./partials/message', locals) $>
+		<div class="chat_header">
+			<span class="chatting_with">Group: everyone</span>
+		</div>
 	</header>
 
 	<aside>
@@ -13,7 +17,7 @@
 				<li>
 					<img src="http://via.placeholder.com/50/CCCCCC/000000">
 					<span class="username"><$= user.username $></span>
-					<span>Last message</span>
+					<span class="last_message">Last message</span>
 				</li>
 			<$ }) $>
 		</ul>
@@ -32,16 +36,22 @@
 
 	<script>
 	    const socket = io()
-	    var clicked_user
+	    var active_chat
 
-	    socket.on('connection', function(socket) {
+	    socket.on('connect', () => {
+	    	socket.emit('connected', {id: socket.id, username: '<$= username $>'})
 		    socket.emit('join', {username: '<$= username $>'})
+	    })
+
+	    socket.on('disconnect', function() {
+	    	alert('Server is not responding')
 	    })
 
 	    $('form').submit(function() {
 	    	var message = $('#m').val()
-	    	if (clicked_user) {		        
-		    	socket.emit('private message', {msg: message, recipient: clicked_user})
+	    	if (active_chat) {
+	    		$('#messages').append($('<li>').text(message))
+		    	socket.emit('private message', {msg: message, recipient: active_chat})
 		    } else {
 		    	socket.emit('chat message', message)
 		    }
@@ -53,14 +63,25 @@
 	        $('#messages').append($('<li>').text(msg))
 	    })
 
-	    socket.on('private message', function(msg) {
-	        $('#messages').append($('<li>').text(msg))
+	    socket.on('private message', function(data) {
+	    	if (data.from == active_chat) {
+	        	$('#messages').append($('<li>').text(data.msg))
+	        }
+
+	        var length = data.msg.length
+	        if (length > 18) {
+	        	data.msg = data.msg.slice(0,-(length-18)) + '...'
+	        }
+
+	        $('aside li span:contains("'+ data.from +'")').next().text(data.msg)
 	    })
 
 	    $('aside li').on('click', function() {
-			clicked_user = $(this).children('.username').text()
-			socket.emit('leave', {username: '<$= username $>'})
-		  	socket.emit('join', {username: clicked_user})
+			active_chat = $(this).children('.username').text()
+			$('.chatting_with').text(active_chat)
+			//socket.emit('leave', {username: '<$= username $>'})
+			$('#messages').empty()
+		  	//socket.emit('join', {username: active_chat})
 		})
 	</script>
 
