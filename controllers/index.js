@@ -16,17 +16,13 @@ function ensureAuthenticated(req, res, next) {
     if(req.isAuthenticated()) {
         return next()
     } else {
-        req.flash('danger', 'Please login')
+        req.flash('failure', 'Please login')
         return res.redirect('/login')
     }
 }
 
 
 router.get('/', (req, res) => {
-    /**
-     * Vaate "renderdamine", ehk parsitakse EJS süntaks HTML-iks kokku
-     * ning saadetakse kliendile, kes selle päringu teostas (ehk kes sellele URL-ile läks)
-    */
     if (req.user) {
       User.find({}, 'username', function (err, users) {
         if (err) return handleError(err)
@@ -41,7 +37,7 @@ router.get('/', (req, res) => {
           }
         }
         users = JSON.stringify(usernames)
-        res.render('private_index', {username: req.user.username, users: usernames})
+        res.render('private_index', {username: req.user.username, email: req.user.email, users: usernames})
       })
 
     } else {
@@ -49,13 +45,19 @@ router.get('/', (req, res) => {
     }
 })
 
-router.post('/', (req, res, next) => {
+/*router.post('/', (req, res, next) => {
     passport.authenticate('local', {
         successRedirect: '/',
         failureRedirect: '/',
         failureFlash: true
     })(req, res, next)
-})
+})*/
+
+router.post('/', passport.authenticate('login', {
+    successRedirect: '/',
+    failureRedirect: '/',
+    failureFlash : true  
+}));
 
 router.get('/logout', (req, res) => {
     req.logout()
@@ -67,13 +69,42 @@ router.get('/register', (req, res) => {
     res.render('register')
 })
 
-router.post('/register', (req, res) => {
+
+router.post('/register', passport.authenticate('signup', {
+    successRedirect: '/',
+    failureRedirect: '/register',
+    failureFlash : true  
+}));
+
+/*router.post('/register', (req, res) => {
+    console.log('POST')
     let username = req.body.username
     let password = req.body.password
     let password2 = req.body.password2
 
-    console.log(username)
-    console.log(password)
+
+    console.log('Username: '+ username +' password'+ password)
+
+    User.findOne({ username: username}, function (err, doc) {
+        if (err) return handleError(err)
+        
+        if (doc == null) {
+            return null
+        } else {
+            error = 1
+        }
+    })
+
+    console.log(error)
+    if (error) {
+        req.flash('failure', 'Username already exists, biatch!')
+        return res.redirect('/register')
+    }
+
+    if (password !== password2) {
+    	req.flash('failure', 'Passwords don\'t match!')
+    	return res.redirect('/register')
+    }
 
     let newUser = new User({
         username: username,
@@ -90,14 +121,14 @@ router.post('/register', (req, res) => {
             newUser.password = hash
             newUser.save(function(err) {
                 if(err) {
-                    console.log(err);
+                    console.log(err)
                     return res.redirect('/register')
                 }
                 return res.redirect('/')
             })
         })
     })
-})
+})*/
 
 
 module.exports = router

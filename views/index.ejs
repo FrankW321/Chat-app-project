@@ -1,13 +1,20 @@
 <$ include ./partials/head $>
-	<div class="login-form">
-		<form method="POST" action="/">
-			<input type="text" name="username" placeholder="Username" autofocus>
-			<input type="password" name="password" placeholder="Password">
-			<button type="submit" name="login">Login</button>
-			<a href="/register"><button type="button" name="register">Register</button></a>
-		</form>
+	<div class="landing_page_section_1">
+		<h1>Codeline<span>_</span></h1>
+		<div class="landing_page_section_1_flexbox">
+			<$- messages('./partials/message', locals) $>
+			<div class="login-form">
+				<h2>Log in</h2>
+				<form method="POST" action="/">
+					<div>
+						<input type="text" name="username" placeholder="Username" autofocus>
+						<input type="password" name="password" placeholder="Password">
+						<button type="submit" name="login" class="button_green">Login</button>
+					</div>
+					<a href="/register"><button type="button" name="register" class="button_green">Register</button></a>
+				</form>
+			</div>
+		</div>
 	</div>
-
-	<$- messages('./partials/message', locals) $>
 
 <$ include ./partials/footer $>

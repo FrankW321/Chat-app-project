@@ -2,8 +2,51 @@
 
 	<header>
 		<div class="friends_list_header">
-			<span>Logged in as: <$= username $></span>
-			<a href="/logout"><button>Logout</button></a>
+			<div class="dropdown_link">
+				<img src="http://via.placeholder.com/50/CCCCCC/000000">
+				<span><$= username $></span>
+			</div>
+
+			<div class="dropdown">
+				<div class="settings">
+					<h2>Settings</h2>
+
+					<label>
+						Username
+						<input type="username" name="username" value="<$= username $>">
+					</label>
+
+					<label>
+						Email
+						<input type="email" name="email" value="<$= email $>">
+					</label>
+
+					<label>
+						New password
+						<input type="password" name="new_password_1">
+					</label>
+
+					<label>
+						New password again
+						<input type="password" name="new_password_2">
+					</label>
+
+					<label>
+						Current password
+						<input type="password" name="password">
+					</label>
+
+					<div class="feedback_message"></div>
+
+					<button id="save_settings" class="button button_green">Save</button>
+					<button id="discard_settings" class="button button_red">Discard</button>
+				</div>
+
+				<ul>
+					<li id="open_settings_panel">Settings</li>
+					<li><a href="/logout"><button class="button button_red">Logout</button></a></li>
+				</ul>
+			</div>
 		</div>
 
 		<div class="chat_header">
@@ -21,9 +64,19 @@
 				</li>
 			<$ }) $>
 		</ul>
+
+		<div class="search_results">
+			<ul></ul>
+		</div>
+
+		<div class="add_box">
+			<img src="images/ic_add_white_24px.svg">
+			<input type="text" name="add" placeholder="Search users">
+		</div>
 	</aside>
 
 	<ul id="messages"></ul>
+	<ul id="code_window"></ul>
 	<div class="messaging_form_container">
 	  <form action="javascript:void(0);">
 	      <input id="m" autocomplete="off" />
@@ -35,54 +88,9 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
 	<script>
-	    const socket = io()
-	    var active_chat
-
-	    socket.on('connect', () => {
-	    	socket.emit('connected', {id: socket.id, username: '<$= username $>'})
-		    socket.emit('join', {username: '<$= username $>'})
-	    })
-
-	    socket.on('disconnect', function() {
-	    	alert('Server is not responding')
-	    })
-
-	    $('form').submit(function() {
-	    	var message = $('#m').val()
-	    	if (active_chat) {
-	    		$('#messages').append($('<li>').text(message))
-		    	socket.emit('private message', {msg: message, recipient: active_chat})
-		    } else {
-		    	socket.emit('chat message', message)
-		    }
-	        $('#m').val('')
-	        return false
-	    })
-
-	    socket.on('chat message', function(msg) {
-	        $('#messages').append($('<li>').text(msg))
-	    })
-
-	    socket.on('private message', function(data) {
-	    	if (data.from == active_chat) {
-	        	$('#messages').append($('<li>').text(data.msg))
-	        }
-
-	        var length = data.msg.length
-	        if (length > 18) {
-	        	data.msg = data.msg.slice(0,-(length-18)) + '...'
-	        }
-
-	        $('aside li span:contains("'+ data.from +'")').next().text(data.msg)
-	    })
-
-	    $('aside li').on('click', function() {
-			active_chat = $(this).children('.username').text()
-			$('.chatting_with').text(active_chat)
-			//socket.emit('leave', {username: '<$= username $>'})
-			$('#messages').empty()
-		  	//socket.emit('join', {username: active_chat})
-		})
+		var current_user = {username:'<$= username $>', email: '<$= email $>'}
 	</script>
+	<script src="js/socketio_listeners.js"></script>
+	<script src="js/buttons.js"></script>
 
 <$ include ./partials/footer $>

@@ -5,6 +5,7 @@ const express = require('express'),
 	  mongoose = require('mongoose'),
 	  passport = require('passport'),
 	  LocalStrategy = require('passport-local'),
+	  bCrypt = require('bcryptjs')
 	  indexRoutes = require('./controllers/index'),
 	  app = express(),
 	  port = 5555,
@@ -24,6 +25,8 @@ let db = mongoose.connection
 db.once('open', function() {
     console.log('Connected to database')
 })
+
+const User = require('./models/user')
 
 
 app.set('view engine', 'ejs')
@@ -45,17 +48,23 @@ app.use(function(req, res, next) {
 
 
 // Passport config
-require('./config/passport')(passport)
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+require('./config/passport/init')(passport)
+
+//require('./config/passport')(passport)
 
 
 // Passport middleware
-app.use(passport.initialize())
-app.use(passport.session())
+//app.use(passport.initialize())
+//app.use(passport.session())
 
-app.get('*', (req, res, next) => {
-    res.locals.user = req.user || null
-    next()
-})
+//app.get('*', (req, res, next) => {
+//   res.locals.user = req.user || null
+//    next()
+//})
 
 
 app.use('/', indexRoutes)
@@ -112,18 +121,108 @@ io.on('connection', function (socket) {
 	})
 
 	socket.on('chat message', function(msg){
-	    console.log('message: ' + msg)
-	    io.emit('chat message', msg)
+	    var unix_epoch = Date.now()
+	    io.emit('chat message', {msg: msg, date: unix_epoch})
 	})
 
 	socket.on('private message', function(data){
 		console.log(users)
 	    console.log('Private message: from: ' + users[socket.id].username + ' to: ' + data.recipient + ' msg: ' + data.msg)
 
+	    var unix_epoch = Date.now()
+
 	    var recipient_id = Object.keys(users).filter(function(id) {
 	    	return users[id].username == data.recipient
 	    })
 
-        io.to(recipient_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].username})
+        io.to(recipient_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].username, date: unix_epoch})
 	})
+
+
+	socket.on('update_user_data', (newUser) => {
+		if (newUser.new_password_1 !== newUser.new_password_2) {
+			feedback('New passwords don\'t match')
+			return
+		}
+
+		User.findOne({username: newUser.username}, function(err, user) {
+			if (err) {
+				feedback({failure: true, feedback: 'error'})
+				return
+			}
+
+			if (newUser.username !== users[socket.id].username && user) {
+				feedback({failure: true, feedback: 'Username is already taken'})
+				return
+			}
+
+
+			User.findOne({username: users[socket.id].username}, function(err, user) {
+				if (err) {
+					feedback({failure: true, feedback: 'error'})
+					return
+				}
+
+				if (user) {
+					if (!bCrypt.compareSync(newUser.password, user.password)) {
+						feedback({failure: true, feedback: 'Password incorrect'})
+						return
+					}
+
+
+					if (user.username != newUser.username && newUser.email) {
+						user.username = newUser.username
+					}
+
+					if (user.email != newUser.email && newUser.email) {
+						user.email = newUser.email
+					}
+
+					if (newUser.new_password_1 && newUser.new_password_2) {
+						user.password = bCrypt.hashSync(newUser.new_password_1, bCrypt.genSaltSync(10), null)
+					}
+
+					user.save(function (err) {
+						if(err) {
+							feedback({failure: true, feedback: 'error'})
+						} else {
+							feedback({failure: false, feedback: 'Updated'})
+						}
+					})
+				} else {
+					feedback({failure: true, feedback: 'error'})
+				}
+				
+			})
+		})
+
+		function feedback(message) {
+			socket.emit('feedback', message)
+		}	
+	})
+
+
+
+	socket.on('search_users', (search_term) => {
+		if (search_term == '') return
+
+
+		/* Retrieve only usernames starting with the search term and
+		don't include current user in the results */
+		User.find({ $and: [
+				{username: new RegExp('^' + search_term, 'i')},
+				{username: { $ne: users[socket.id].username }} 
+			]}, 'username -_id', function (err, found_users) {
+
+		        if (err) return handleError(err)
+
+		        found_users = found_users.map(function (obj) {
+		        	return obj.username
+		        })
+
+		        io.to(socket.id).emit('search_results', found_users)
+		    }
+	    ).limit(5)
+	})
+	
 })
