@@ -10,7 +10,7 @@ module.exports = function(passport){
         function(req, username, password, done) {
 
             if (password !== req.body.password2) {
-                return done(null, false, req.flash('message', 'Passwords don\'t match!'))
+                return done(null, false, req.flash('error', 'Passwords don\'t match!'))
             }
 
             findOrCreateUser = function(){
@@ -24,7 +24,7 @@ module.exports = function(passport){
                     // already exists
                     if (user) {
                         console.log('User already exists with username: '+username)
-                        return done(null, false, req.flash('message','User Already Exists'))
+                        return done(null, false, req.flash('error','User Already Exists'))
                     } else {
                         // if there is no user with that email
                         // create the user
@@ -32,6 +32,7 @@ module.exports = function(passport){
 
                         // set the user's local credentials
                         newUser.username = username
+                        newUser.email = req.body.email
                         newUser.password = createHash(password)
 
                         // save the user

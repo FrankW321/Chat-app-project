@@ -54,18 +54,6 @@ app.use(passport.session());
 
 require('./config/passport/init')(passport)
 
-//require('./config/passport')(passport)
-
-
-// Passport middleware
-//app.use(passport.initialize())
-//app.use(passport.session())
-
-//app.get('*', (req, res, next) => {
-//   res.locals.user = req.user || null
-//    next()
-//})
-
 
 app.use('/', indexRoutes)
 
@@ -126,7 +114,6 @@ io.on('connection', function (socket) {
 	})
 
 	socket.on('private message', function(data){
-		console.log(users)
 	    console.log('Private message: from: ' + users[socket.id].username + ' to: ' + data.recipient + ' msg: ' + data.msg)
 
 	    var unix_epoch = Date.now()
@@ -223,6 +210,59 @@ io.on('connection', function (socket) {
 		        io.to(socket.id).emit('search_results', found_users)
 		    }
 	    ).limit(5)
+	})
+
+
+	socket.on('friend_request', (recipient) => {
+		User.findOne({username: users[socket.id].username}, function(err, user) {
+			if (err) {
+				// To-do error msg
+				return
+			}
+
+			if (user) {
+				if (user.received_friend_requests.indexOf(recipient) !== -1) {
+					accept_friend_request(recipient)
+				} else {
+					User.update({ username: recipient }, { $addToSet: { received_friend_requests: users[socket.id].username } }, function(err, raw) {
+						if (err) return handleError(err)
+						io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: recipient})
+					})
+
+					User.update({ username: users[socket.id].username }, { $addToSet: { sent_friend_requests: recipient } }, function(err, raw) {
+						if (err) return handleError(err)
+					})
+				}
+			} else {
+				// To-do error msg				
+			}
+		})
+	})
+
+
+	socket.on('accept_friend_request', (friend) => {
+		accept_friend_request(friend)
+	})
+
+	function accept_friend_request(friend) {
+		User.update({ username: users[socket.id].username }, { $addToSet: { friends: friend }, $pull: {received_friend_requests: friend, sent_friend_requests: friend} }, function(err, raw) {
+			if (err) return handleError(err)
+			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: friend})
+			console.log(raw)
+		})
+
+		User.update({ username: friend }, { $addToSet: { friends: users[socket.id].username }, $pull: {received_friend_requests: users[socket.id].username, sent_friend_requests: users[socket.id].username} }, function(err, raw) {
+			if (err) return handleError(err)
+			console.log(raw)
+		})
+	}
+
+	socket.on('decline_friend_request', (contact) => {
+		User.update({ username: users[socket.id].username }, { $pull: {received_friend_requests: contact} }, function(err, raw) {
+			if (err) return handleError(err)
+			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: contact})
+			console.log(raw)
+		})
 	})
 	
 })

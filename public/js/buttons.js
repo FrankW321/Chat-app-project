@@ -11,7 +11,7 @@ $('form').submit(function() {
 
 	if (active_chat) {
 		var date = new Date(Date.now())
-		$('#messages').append('<li><span class="message">'+ message +'</span><span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></li>')
+		$('#messages').append('<li class="sent"><span class="message">'+ message +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
 		//$('#messages').append($('<li>').text(message))
     	socket.emit('private message', {msg: message, recipient: active_chat})
     } else {
@@ -25,6 +25,7 @@ $('form').submit(function() {
 // Change active chat
 $('aside li').on('click', function() {
 	active_chat = $(this).children('.username').text()
+	//history.pushState(null, null, active_chat)
 	$('.chatting_with').text(active_chat)
 	$('.active_chat').removeClass('active_chat')
 	$(this).addClass('active_chat')
@@ -49,9 +50,17 @@ $('.friends_list_header .dropdown_link').on('click', function(event) {
 })
 
 
+// Toggle notification panel
+$('#open_notification_panel').on('click', function(event) {
+	event.stopPropagation()
+	$('.friends_list_header .settings').hide('fast')
+	$('.friends_list_header .notifications').toggle('fast')
+})
+
 // Toggle settings panel
 $('#open_settings_panel').on('click', function(event) {
 	event.stopPropagation()
+	$('.friends_list_header .notifications').hide('fast')
 	$('.friends_list_header .settings').toggle('fast')
 })
 
@@ -61,9 +70,10 @@ $('.settings, .dropdown').on('click', function(event) {
 })
 
 
-// Close dropdown, settings panel and search box when clicked outside
+// Close dropdown, settings panel, notification panel and search box when clicked outside
 $(document).on('click', function() {
 	$('.friends_list_header .dropdown').hide('fast')
+	$('.friends_list_header .notifications').hide('fast')
 	$('.search_results ul').empty()
 	$('.add_box input').prop('value', '')
 	$('.add_box').removeClass('add_box_shown')
@@ -89,8 +99,8 @@ $('#discard_settings').on('click', function() {
 })
 
 function discard_settings() {
-	$('.settings input[name="username"]').prop('value', current_user.username)
-	$('.settings input[name="email"]').prop('value', current_user.email)
+	$('.settings input[name="username"]').prop('value', user.username)
+	$('.settings input[name="email"]').prop('value', user.email)
 	$('.settings input[name="new_password_1"]').prop('value', '')
 	$('.settings input[name="new_password_2"]').prop('value', '')
 	$('.settings input[name="password"]').prop('value', '')
@@ -118,4 +128,35 @@ $('.add_box input').on('keyup', function() {
 	} else {
 		$('.search_results ul').empty()
 	}
+})
+
+
+// Send friend request
+function attach_click_handlers() {
+	$('.search_results li:not(:has(button))').on('click', function(event) {
+		event.stopPropagation()
+		const username = $(this).text()
+		$('aside li .username:contains('+ username +')').click()
+	})
+
+	$('.search_results li button').on('click', function(event) {
+		event.stopPropagation()
+		$(this).append('<div class="loading_div"></div>')
+		socket.emit('friend_request', $(this).parent().text() )
+	})
+}
+
+
+// Accept friend request
+$('.notifications .accept_request').on('click', function(event) {
+	event.stopPropagation()
+	$(this).parent().append('<div class="loading_div"></div>')
+	socket.emit('accept_friend_request', $(this).parents('li').first().text() )
+})
+
+// Decline friend request
+$('.notifications .decline_request').on('click', function(event) {
+	event.stopPropagation()
+	$(this).parent().append('<div class="loading_div"></div>')
+	socket.emit('decline_friend_request', $(this).parents('li').first().text() )
 })

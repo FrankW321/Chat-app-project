@@ -4,7 +4,10 @@
 		<div class="friends_list_header">
 			<div class="dropdown_link">
 				<img src="http://via.placeholder.com/50/CCCCCC/000000">
-				<span><$= username $></span>
+				<span><$= user.username $></span>
+				<$ if(user.received_friend_requests.length > 0) { $>
+						<span class="notification_count"><$= user.received_friend_requests.length $></span>
+				<$ } $>
 			</div>
 
 			<div class="dropdown">
@@ -13,12 +16,12 @@
 
 					<label>
 						Username
-						<input type="username" name="username" value="<$= username $>">
+						<input type="username" name="username" value="<$= user.username $>">
 					</label>
 
 					<label>
 						Email
-						<input type="email" name="email" value="<$= email $>">
+						<input type="email" name="email" value="<$= user.email $>">
 					</label>
 
 					<label>
@@ -42,10 +45,19 @@
 					<button id="discard_settings" class="button button_red">Discard</button>
 				</div>
 
+				<div class="notifications">
+					<ul>
+						<$ user.received_friend_requests.forEach(function(friend_request) { $>
+							<li><$= friend_request $><div><div><img src="images/ic_person_add_white_24px.svg" class="accept_request" alt="accept friend request"></div><div><img src="images/ic_remove_circle_white_24px.svg" class="decline_request" alt="decline friend request"></div></div></li>
+						<$ }) $>
+					</ul>
+				</div>
+
 				<ul>
+					<li id="open_notification_panel">Notifications</li>
 					<li id="open_settings_panel">Settings</li>
-					<li><a href="/logout"><button class="button button_red">Logout</button></a></li>
 				</ul>
+				<a href="/logout"><button class="button button_red">Logout</button></a>
 			</div>
 		</div>
 
@@ -56,10 +68,10 @@
 
 	<aside>
 		<ul>
-			<$ users.forEach(function(user) { $>
+			<$ user.friends.forEach(function(friend) { $>
 				<li>
 					<img src="http://via.placeholder.com/50/CCCCCC/000000">
-					<span class="username"><$= user.username $></span>
+					<span class="username"><$= friend $></span>
 					<span class="last_message">Last message</span>
 				</li>
 			<$ }) $>
@@ -79,7 +91,7 @@
 	<ul id="code_window"></ul>
 	<div class="messaging_form_container">
 	  <form action="javascript:void(0);">
-	      <input id="m" autocomplete="off" />
+	      <input id="m" autocomplete="off" placeholder="Type your message here...">
 	      <button>Send</button>
 	  </form>
 	</div>
@@ -88,7 +100,7 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
 	<script>
-		var current_user = {username:'<$= username $>', email: '<$= email $>'}
+		var user = <$- JSON.stringify(user) $>
 	</script>
 	<script src="js/socketio_listeners.js"></script>
 	<script src="js/buttons.js"></script>

@@ -4,7 +4,7 @@ Instant messaging app for developers
 
 
 To-do list:
-* Friends
+* ~~Friends~~
 * Groups
 * File/image sharing
 * Code snippets' sharing - syntax highlighting
