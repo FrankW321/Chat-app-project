@@ -79,7 +79,7 @@ io.on('connection', function (socket) {
 	console.log('User connected')
 
 	socket.on('connected', function(data) {
-		users[data.id] = {'username': data.username}
+		users[socket.id] = {'id': data.id, 'username': data.username}
 		console.log(users)
 	})
 
@@ -114,21 +114,21 @@ io.on('connection', function (socket) {
 	})
 
 	socket.on('private message', function(data){
-	    console.log('Private message: from: ' + users[socket.id].username + ' to: ' + data.recipient + ' msg: ' + data.msg)
+	    console.log('Private message: from: ' + users[socket.id].username + ' to: ' + data.recipient_id + ' msg: ' + data.msg)
 
 	    var unix_epoch = Date.now()
 
-	    var recipient_id = Object.keys(users).filter(function(id) {
-	    	return users[id].username == data.recipient
+	    var recipient_socket_id = Object.keys(users).filter(function(id) {
+	    	return users[id].id == data.recipient_id
 	    })
 
-        io.to(recipient_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].username, date: unix_epoch})
+        io.to(recipient_socket_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].id, date: unix_epoch})
 	})
 
 
 	socket.on('update_user_data', (newUser) => {
 		if (newUser.new_password_1 !== newUser.new_password_2) {
-			feedback('New passwords don\'t match')
+			feedback({failure: true, feedback: 'New passwords don\'t match'})
 			return
 		}
 
@@ -144,7 +144,7 @@ io.on('connection', function (socket) {
 			}
 
 
-			User.findOne({username: users[socket.id].username}, function(err, user) {
+			User.findOne({_id: users[socket.id].id}, function(err, user) {
 				if (err) {
 					feedback({failure: true, feedback: 'error'})
 					return
@@ -199,12 +199,15 @@ io.on('connection', function (socket) {
 		User.find({ $and: [
 				{username: new RegExp('^' + search_term, 'i')},
 				{username: { $ne: users[socket.id].username }} 
-			]}, 'username -_id', function (err, found_users) {
+			]}, 'username', function (err, found_users) {
 
 		        if (err) return handleError(err)
 
-		        found_users = found_users.map(function (obj) {
-		        	return obj.username
+		    	found_users = found_users.map(function (obj) {
+		    		return {
+		    			id: obj.id,
+		    			username: obj.username
+		    		}
 		        })
 
 		        io.to(socket.id).emit('search_results', found_users)
@@ -213,23 +216,23 @@ io.on('connection', function (socket) {
 	})
 
 
-	socket.on('friend_request', (recipient) => {
-		User.findOne({username: users[socket.id].username}, function(err, user) {
+	socket.on('friend_request', (recipient_id) => {
+		User.findOne({_id: users[socket.id].id}, function(err, user) {
 			if (err) {
 				// To-do error msg
 				return
 			}
 
 			if (user) {
-				if (user.received_friend_requests.indexOf(recipient) !== -1) {
-					accept_friend_request(recipient)
+				if (user.received_friend_requests.indexOf(recipient_id) !== -1) {
+					accept_friend_request(recipient_id)
 				} else {
-					User.update({ username: recipient }, { $addToSet: { received_friend_requests: users[socket.id].username } }, function(err, raw) {
+					User.update({ _id: recipient_id }, { $addToSet: { received_friend_requests: users[socket.id].id } }, function(err, raw) {
 						if (err) return handleError(err)
-						io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: recipient})
+						io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient_id: recipient_id})
 					})
 
-					User.update({ username: users[socket.id].username }, { $addToSet: { sent_friend_requests: recipient } }, function(err, raw) {
+					User.update({ _id: users[socket.id].id }, { $addToSet: { sent_friend_requests: recipient_id } }, function(err, raw) {
 						if (err) return handleError(err)
 					})
 				}
@@ -240,27 +243,27 @@ io.on('connection', function (socket) {
 	})
 
 
-	socket.on('accept_friend_request', (friend) => {
-		accept_friend_request(friend)
+	socket.on('accept_friend_request', (friend_id) => {
+		accept_friend_request(friend_id)
 	})
 
-	function accept_friend_request(friend) {
-		User.update({ username: users[socket.id].username }, { $addToSet: { friends: friend }, $pull: {received_friend_requests: friend, sent_friend_requests: friend} }, function(err, raw) {
+	function accept_friend_request(friend_id) {
+		User.update({ _id: users[socket.id].id }, { $addToSet: { friends: friend_id }, $pull: {received_friend_requests: friend_id, sent_friend_requests: friend_id} }, function(err, raw) {
 			if (err) return handleError(err)
-			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: friend})
+			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient_id: friend_id})
 			console.log(raw)
 		})
 
-		User.update({ username: friend }, { $addToSet: { friends: users[socket.id].username }, $pull: {received_friend_requests: users[socket.id].username, sent_friend_requests: users[socket.id].username} }, function(err, raw) {
+		User.update({ _id: friend_id }, { $addToSet: { friends: users[socket.id].id }, $pull: {received_friend_requests: users[socket.id].id, sent_friend_requests: users[socket.id].username} }, function(err, raw) {
 			if (err) return handleError(err)
 			console.log(raw)
 		})
 	}
 
-	socket.on('decline_friend_request', (contact) => {
-		User.update({ username: users[socket.id].username }, { $pull: {received_friend_requests: contact} }, function(err, raw) {
+	socket.on('decline_friend_request', (contact_id) => {
+		User.update({ _id: users[socket.id].id }, { $pull: {received_friend_requests: contact_id} }, function(err, raw) {
 			if (err) return handleError(err)
-			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient: contact})
+			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient_id: contact_id})
 			console.log(raw)
 		})
 	})

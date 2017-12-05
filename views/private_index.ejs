@@ -48,7 +48,7 @@
 				<div class="notifications">
 					<ul>
 						<$ user.received_friend_requests.forEach(function(friend_request) { $>
-							<li><$= friend_request $><div><div><img src="images/ic_person_add_white_24px.svg" class="accept_request" alt="accept friend request"></div><div><img src="images/ic_remove_circle_white_24px.svg" class="decline_request" alt="decline friend request"></div></div></li>
+							<li data-id="<$= friend_request.id $>"><$= friend_request.username $><div><div><img src="images/ic_person_add_white_24px.svg" class="accept_request" alt="accept friend request"></div><div><img src="images/ic_remove_circle_white_24px.svg" class="decline_request" alt="decline friend request"></div></div></li>
 						<$ }) $>
 					</ul>
 				</div>
@@ -67,11 +67,11 @@
 	</header>
 
 	<aside>
-		<ul>
+		<ul class="friends_list">
 			<$ user.friends.forEach(function(friend) { $>
-				<li>
+				<li data-id="<$= friend.id $>">
 					<img src="http://via.placeholder.com/50/CCCCCC/000000">
-					<span class="username"><$= friend $></span>
+					<span class="username"><$= friend.username $></span>
 					<span class="last_message">Last message</span>
 				</li>
 			<$ }) $>

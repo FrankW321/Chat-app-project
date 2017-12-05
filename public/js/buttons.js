@@ -13,7 +13,7 @@ $('form').submit(function() {
 		var date = new Date(Date.now())
 		$('#messages').append('<li class="sent"><span class="message">'+ message +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
 		//$('#messages').append($('<li>').text(message))
-    	socket.emit('private message', {msg: message, recipient: active_chat})
+    	socket.emit('private message', {msg: message, recipient_id: active_chat})
     } else {
     	socket.emit('chat message', message)
     }
@@ -24,12 +24,13 @@ $('form').submit(function() {
 
 // Change active chat
 $('aside li').on('click', function() {
-	active_chat = $(this).children('.username').text()
+	var active_chat_username = $(this).children('.username').text()
+	active_chat = $(this).data('id')
 	//history.pushState(null, null, active_chat)
-	$('.chatting_with').text(active_chat)
+	$('.chatting_with').text(active_chat_username)
 	$('.active_chat').removeClass('active_chat')
 	$(this).addClass('active_chat')
-	$('aside li span:contains("'+ active_chat +'")').next().removeClass('last_message-unread')
+	$('aside li[data-id="'+ active_chat +'"]').children('.last_message').removeClass('last_message-unread')
 
 	$('#m').focus()
 	//socket.emit('leave', {username: '<$= username $>'})
@@ -110,7 +111,7 @@ function discard_settings() {
 
 
 // Search box stuff
-$('.add_box img').on('click', function() {
+$('.add_box img').on('click', function(event) {
 	event.stopPropagation()
 	$('.add_box').toggleClass('add_box_shown')
 	$('.add_box input').focus()
@@ -135,14 +136,15 @@ $('.add_box input').on('keyup', function() {
 function attach_click_handlers() {
 	$('.search_results li:not(:has(button))').on('click', function(event) {
 		event.stopPropagation()
-		const username = $(this).text()
-		$('aside li .username:contains('+ username +')').click()
+		const user_id = $(this).data('id')
+		$('aside li[data-id="'+ user_id +'"]').click()
 	})
 
 	$('.search_results li button').on('click', function(event) {
 		event.stopPropagation()
 		$(this).append('<div class="loading_div"></div>')
-		socket.emit('friend_request', $(this).parent().text() )
+		console.log($(this).parent().data('id'))
+		socket.emit('friend_request', $(this).parent().data('id') )
 	})
 }
 
@@ -151,12 +153,12 @@ function attach_click_handlers() {
 $('.notifications .accept_request').on('click', function(event) {
 	event.stopPropagation()
 	$(this).parent().append('<div class="loading_div"></div>')
-	socket.emit('accept_friend_request', $(this).parents('li').first().text() )
+	socket.emit('accept_friend_request', $(this).parents('li').first().data('id') )
 })
 
 // Decline friend request
 $('.notifications .decline_request').on('click', function(event) {
 	event.stopPropagation()
 	$(this).parent().append('<div class="loading_div"></div>')
-	socket.emit('decline_friend_request', $(this).parents('li').first().text() )
+	socket.emit('decline_friend_request', $(this).parents('li').first().data('id') )
 })

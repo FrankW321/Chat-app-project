@@ -1,7 +1,7 @@
 const socket = io()
 
 socket.on('connect', () => {
-	socket.emit('connected', {id: socket.id, username: user.username})
+	socket.emit('connected', {id: user.id, username: user.username})
     socket.emit('join', {username: user.username})
 })
 
@@ -24,7 +24,7 @@ socket.on('private message', function(data) {
     	// $('#messages').append($('<li>').text(data.msg))
     	$('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
     } else {
-    	$('aside li span:contains("'+ data.from +'")').next().addClass('last_message-unread')
+    	$('.friends_list li[data-id="'+ data.from +'"]').next().addClass('last_message-unread')
     }
 
     var length = data.msg.length
@@ -32,7 +32,7 @@ socket.on('private message', function(data) {
     	data.msg = data.msg.slice(0,-(length-18)) + '...'
     }
 
-    $('aside li span:contains("'+ data.from +'")').next().text(data.msg)
+    $('.friends_list li[data-id="'+ data.from +'"]').children('.last_message').text(data.msg)
 })
 
 
@@ -61,9 +61,9 @@ socket.on('feedback', function(data) {
 // Receive feedback upon sending friend request
 socket.on('friend_request_feedback', function(data) {
 	if (data.nModified === 1) {
-		$('.search_results li:contains('+ data.recipient +')').find('button').remove()
-		$('.search_results li:contains('+ data.recipient +')').append('<span>Friend request pending</span>')
-		$('.notifications li:contains('+ data.recipient +')').remove()
+		$('.search_results li[data-id="'+ data.recipient_id +'"]').find('button').remove()
+		$('.search_results li[data-id="'+ data.recipient_id +'"]').append('<span>Friend request pending</span>')
+		$('.notifications li[data-id="'+ data.recipient_id +'"]').remove()
 
 		var notification_count_el = $('.notification_count')
 
@@ -75,7 +75,7 @@ socket.on('friend_request_feedback', function(data) {
 			notification_count_el.text(count)
 		}
 	} else {
-		$('.search_results li:contains('+ data.recipient +')').find('.loading_div').remove()
+		$('.search_results li[data-id="'+ data.recipient_id +'"]').find('.loading_div').remove()
 	}
 })
 
@@ -84,19 +84,25 @@ socket.on('friend_request_feedback', function(data) {
 socket.on('search_results', function(results) {
 	$('.search_results ul').empty()
 
-	$.each( results, function( i, value) {
-		if (user.friends.indexOf(value) == -1) {
-			if (user.sent_friend_requests.indexOf(value) == -1) {
-				$('.search_results ul').append('<li>'+ value +'<button><img src="images/ic_person_add_white_24px.svg" alt="Send friend request"></button></li>')
-			} else if(user.received_friend_requests.indexOf(value) == -1){
-				$('.search_results ul').append('<li>'+ value +'<span>Friend request pending</span></li>')
+	$.each( results, function( i, obj) {
+		if (is_value_in_object(user.friends, obj) == -1) {
+			if (is_value_in_object(user.sent_friend_requests, obj) == -1) {
+				$('.search_results ul').append('<li data-id='+ obj.id +'>'+ obj.username +'<button><img src="images/ic_person_add_white_24px.svg" alt="Send friend request"></button></li>')
+			} else if (is_value_in_object(user.received_friend_requests, obj) == -1) {
+				$('.search_results ul').append('<li data-id='+ obj.id +'>'+ obj.username +'<span>Friend request pending</span></li>')
 			} else {
 
 			}
 		} else {
-			$('.search_results ul').append('<li>'+ value +'</li>')
+			$('.search_results ul').append('<li data-id='+ obj.id +'>'+ obj.username +'</li>')
 		}
 	})
+
+	function is_value_in_object(array, object) {
+		return array.findIndex(function(obj) {
+			return obj.id == object.id 
+		})
+	}
 
 	attach_click_handlers()
 })
