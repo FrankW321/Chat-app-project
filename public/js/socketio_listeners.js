@@ -1,4 +1,5 @@
 const socket = io()
+let last_timestamp
 
 socket.on('connect', () => {
 	socket.emit('connected', {id: user.id, username: user.username})
@@ -6,23 +7,55 @@ socket.on('connect', () => {
 })
 
 socket.on('disconnect', function() {
-	alert('Server is not responding')
-}) 
+	//alert('Server is not responding')
+})
 
 
 // Receive general messages
-socket.on('chat message', function(data) {
-    var date = new Date(data.date)
-    $('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
+socket.on('chat_message', function(data) {
+    var timestamp = format_timestamp(data.date)
+    $('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ timestamp +'</span></span></li>')
+	var true_el_height = $('#messages')[0].scrollHeight
+	var el_height = $('#messages').height()
+	var pos_from_bottom = true_el_height - el_height - $('#messages').prop('scrollTop')
+
+	if (pos_from_bottom < 400) {
+		$('#messages').scrollTop($('#messages').prop('scrollHeight'))
+	}
 })
 
 
 // Receive private messages
-socket.on('private message', function(data) {
-	var date = new Date(data.date)
-	if (data.from == active_chat) {
-    	// $('#messages').append($('<li>').text(data.msg))
-    	$('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
+socket.on('private_message', function(data) {
+	var timestamp = format_timestamp(data.date)
+	if (active_chat && data.from == active_chat.recipient_id) {
+    	var previous_el = $('#messages li').last()
+    	var previous_timestamp = previous_el.find('.message_timestamp').data('timestamp')
+
+    	if (data.date - previous_timestamp <= 30000 && !previous_el.hasClass('sent')) {
+
+			if (previous_el.hasClass('connected_up')) {
+				previous_el.removeClass('connected_up')
+				previous_el.addClass('connected')	
+			} else {
+				previous_el.addClass('connected_down')
+			}
+
+			new_content ='<li class="connected_up"><span class="message">'+ data.msg +'<span class="message_timestamp" data-timestamp="'+ data.date +'">'+ timestamp +'</span></span></li>'
+		} else {
+    		new_content ='<li><span class="message">'+ data.msg +'<span class="message_timestamp" data-timestamp="'+ data.date +'">'+ timestamp +'</span></span></li>'
+    	}
+
+    	$('#messages').append(new_content)
+
+
+		var true_el_height = $('#messages')[0].scrollHeight
+		var el_height = $('#messages').height()
+		var pos_from_bottom = true_el_height - el_height - $('#messages').prop('scrollTop')
+
+		if (pos_from_bottom < 400) {
+			$('#messages').scrollTop($('#messages').prop('scrollHeight'))
+		}
     } else {
     	$('.friends_list li[data-id="'+ data.from +'"]').next().addClass('last_message-unread')
     }
@@ -33,6 +66,63 @@ socket.on('private message', function(data) {
     }
 
     $('.friends_list li[data-id="'+ data.from +'"]').children('.last_message').text(data.msg)
+})
+
+// Receive message history
+
+var first_run = true
+
+socket.on('retrieve_messages', function(messages) {
+	messages = JSON.parse(messages)
+	var timestamp
+
+	$('#messages .loading').remove()
+
+	if (messages.length == 0) {
+		lock = true
+		return
+	}
+
+	last_timestamp = messages[messages.length-1].date
+
+	for (var i = 0; i < messages.length; i++) {
+		timestamp = format_timestamp(messages[i].date)
+		
+		if (messages[i].from == user.id) {
+			append_message('sent')
+		} else {
+			append_message('')
+		}
+	}
+
+	var true_el_height = $('#messages')[0].scrollHeight
+	var el_height = $('#messages').height()
+	var pos_from_bottom = true_el_height - el_height - $('#messages').prop('scrollTop')
+
+	if (first_run || (!lock && pos_from_bottom < 400)) {
+		first_run = false
+		$('#messages').scrollTop($('#messages').prop('scrollHeight'))
+	}
+
+	lock = false
+
+	function append_message(classes) {
+		var new_content
+
+		if (i > 0 && messages[i].date - messages[i-1].date <= 30000 && messages[i].from == messages[i-1].from) {
+			if (i != (messages.length - 1) && messages[i+1].date - messages[i].date <= 30000 && messages[i].from == messages[i+1].from) {
+				new_content ='<li class="connected '+ classes +'"><span class="message">'+ messages[i].msg +'<span class="message_timestamp" data-timestamp="'+ messages[i].date +'">'+ timestamp +'</span></span></li>'
+			} else {
+				new_content ='<li class="connected_down '+ classes +'"><span class="message">'+ messages[i].msg +'<span class="message_timestamp" data-timestamp="'+ messages[i].date +'">'+ timestamp +'</span></span></li>'
+			}
+		} else if (i < messages.length && i != (messages.length - 1) && messages[i+1].date - messages[i].date <= 30000 && messages[i].from == messages[i+1].from) {
+			new_content ='<li class="connected_up '+ classes +'"><span class="message">'+ messages[i].msg +'<span class="message_timestamp" data-timestamp="'+ messages[i].date +'">'+ timestamp +'</span></span></li>'
+		} else {
+    		new_content ='<li class="'+ classes +'"><span class="message">'+ messages[i].msg +'<span class="message_timestamp" data-timestamp="'+ messages[i].date +'">'+ timestamp +'</span></span></li>'
+    	}
+
+    	$('#messages').prepend(new_content)
+	}
 })
 
 
@@ -106,3 +196,16 @@ socket.on('search_results', function(results) {
 
 	attach_click_handlers()
 })
+
+
+function format_timestamp(unix_epoch) {
+	var date = new Date(unix_epoch)
+
+	var day = date.getDate()
+	var month = date.getMonth() + 1
+	var hour = date.getHours()
+	var minutes = (date.getMinutes() < 10 ? '0' : '') + date.getMinutes()
+	//var seconds = (date.getSeconds() < 10 ? '0' : '') + date.getSeconds()
+
+	return day + '/' + month + ' ' + hour + ':' + minutes// + ':' + seconds
+}

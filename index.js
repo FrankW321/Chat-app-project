@@ -5,7 +5,8 @@ const express = require('express'),
 	  mongoose = require('mongoose'),
 	  passport = require('passport'),
 	  LocalStrategy = require('passport-local'),
-	  bCrypt = require('bcryptjs')
+	  bCrypt = require('bcryptjs'),
+	  escapeStringRegexp = require('escape-string-regexp'),
 	  indexRoutes = require('./controllers/index'),
 	  app = express(),
 	  port = 5555,
@@ -15,7 +16,7 @@ const express = require('express'),
 
 // Mongodb database connection
 const mongoDB = 'mongodb://localhost/chat'
-mongoose.Promise = global.Promise
+mongoose.Promise = Promise
 mongoose.connect(mongoDB, {
 	useMongoClient: true
 })
@@ -27,7 +28,6 @@ db.once('open', function() {
 })
 
 const User = require('./models/user')
-
 
 app.set('view engine', 'ejs')
 ejs.delimiter = '$'
@@ -122,7 +122,30 @@ io.on('connection', function (socket) {
 	    	return users[id].id == data.recipient_id
 	    })
 
-        io.to(recipient_socket_id[0]).emit('private message', {msg: data.msg, from: users[socket.id].id, date: unix_epoch})
+
+	    var collection = data.chat_id
+
+
+	    db.collection(collection).insert({ from: users[socket.id].id, to: data.recipient_id, msg: data.msg, date: unix_epoch }, function(writeResult) {
+			console.log(writeResult)
+        	io.to(recipient_socket_id[0]).emit('private_message', {msg: data.msg, chat_id: data.chat_id, from: users[socket.id].id, date: unix_epoch})
+		})
+	})
+
+	socket.on('retrieve_messages', function(data) {
+		var find_query = {}
+
+		if (data.last_timestamp) {
+			find_query = { date: {'$lt': data.last_timestamp} }
+		}
+
+		db.collection(data.chat_id).find(find_query, {_id: 0}).sort({ date: -1 }).limit(50).toArray( function(err, messages) {
+
+	        if (err) return handleError(err)
+
+    		io.to(socket.id).emit('retrieve_messages', JSON.stringify(messages))
+
+		})
 	})
 
 
@@ -193,6 +216,7 @@ io.on('connection', function (socket) {
 	socket.on('search_users', (search_term) => {
 		if (search_term == '') return
 
+		search_term = escapeStringRegexp(search_term)
 
 		/* Retrieve only usernames starting with the search term and
 		don't include current user in the results */
@@ -248,13 +272,24 @@ io.on('connection', function (socket) {
 	})
 
 	function accept_friend_request(friend_id) {
-		User.update({ _id: users[socket.id].id }, { $addToSet: { friends: friend_id }, $pull: {received_friend_requests: friend_id, sent_friend_requests: friend_id} }, function(err, raw) {
+		var friend = {
+			id: friend_id,
+			chat: '_'+ users[socket.id].id +'_'+ friend_id
+		}
+
+		User.update({ _id: users[socket.id].id }, { $addToSet: { friends: friend }, $pull: {received_friend_requests: friend_id, sent_friend_requests: friend_id} }, function(err, raw) {
 			if (err) return handleError(err)
 			io.to(socket.id).emit('friend_request_feedback', {nModified: raw.nModified, recipient_id: friend_id})
 			console.log(raw)
 		})
 
-		User.update({ _id: friend_id }, { $addToSet: { friends: users[socket.id].id }, $pull: {received_friend_requests: users[socket.id].id, sent_friend_requests: users[socket.id].username} }, function(err, raw) {
+
+		friend = {
+			id: users[socket.id].id,
+			chat: '_'+ users[socket.id].id +'_'+ friend_id
+		}
+
+		User.update({ _id: friend_id }, { $addToSet: { friends: friend }, $pull: {received_friend_requests: users[socket.id].id, sent_friend_requests: users[socket.id].username} }, function(err, raw) {
 			if (err) return handleError(err)
 			console.log(raw)
 		})

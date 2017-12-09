@@ -4,7 +4,9 @@
   "description": "Chat app",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "bluebird": "^3.5.1",
     "connect-flash": "^0.1.1",
+    "escape-string-regexp": "^1.0.5",
     "express": "^4.14.0",
     "express-controller": "^0.3.2",
     "express-handlebars": "^3.0.0",

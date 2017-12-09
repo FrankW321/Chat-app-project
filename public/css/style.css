@@ -288,7 +288,7 @@ header {
     position   : absolute;
     display    : none;
     top        : 0;
-    left: 20vw;
+    left       : 20vw;
 
     width      : 20vw;
     padding    : 10px 15px;
@@ -435,12 +435,16 @@ aside li span.username {
 }
 
 aside li span.last_message {
-    position : absolute;
-    display  : inline-block;
-    bottom   : 10px;
-    left     : 60px;
+    position    : absolute;
+    display     : inline-block;
+    bottom      : 10px;
+    left        : 60px;
 
-    color    : #ffffff45;
+    overflow    : hidden;
+    max-width   : calc(100% - 70px);
+
+    color       : #ffffff45;
+    white-space : nowrap;
 }
 
 aside li span.last_message-unread {
@@ -665,14 +669,35 @@ aside li span.last_message-unread {
     position        : relative;
     display         : flex;
 
-    margin          : 10px 0;
+    margin          : 20px 0;
 
     justify-content : flex-start;
+}
+
+#messages .loading {
+    margin : 30px 0;
+}
+
+#messages li .loading_div {
+    top  : -20px;
+    left : 50%;
 }
 
 #messages .sent {
     display         : flex;
     justify-content : flex-end;
+}
+
+#messages .connected_up {
+    margin : 2px 0 20px 0;
+}
+
+#messages .connected_down {
+    margin : 20px 0 2px 0;
+}
+
+#messages .connected {
+    margin : 2px 0;
 }
 
 #messages .message {

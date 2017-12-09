@@ -69,10 +69,14 @@
 	<aside>
 		<ul class="friends_list">
 			<$ user.friends.forEach(function(friend) { $>
-				<li data-id="<$= friend.id $>">
-					<img src="http://via.placeholder.com/50/CCCCCC/000000">
+				<li data-id="<$= friend.id $>" data-chat-id="<$= friend.chat $>">
+					<img src="http://via.placeholder.com/50/CCCCCC/000000?text=<$= friend.username.charAt(0) $>">
 					<span class="username"><$= friend.username $></span>
-					<span class="last_message">Last message</span>
+					<span class="last_message">
+						<$ if(friend.last_msg) { $>
+							<$= friend.last_msg.from == user.id ? 'You: '+friend.last_msg.msg : ''+friend.last_msg.msg $>
+						<$ } $>
+					</span>
 				</li>
 			<$ }) $>
 		</ul>

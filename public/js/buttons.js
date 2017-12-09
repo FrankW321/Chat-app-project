@@ -10,13 +10,33 @@ $('form').submit(function() {
 	}
 
 	if (active_chat) {
-		var date = new Date(Date.now())
-		$('#messages').append('<li class="sent"><span class="message">'+ message +'<span class="message_timestamp">'+ date.getDate() +'/'+ (date.getMonth() + 1) +' '+ date.getHours() + ':' + date.getMinutes() +'</span></span></li>')
-		//$('#messages').append($('<li>').text(message))
-    	socket.emit('private message', {msg: message, recipient_id: active_chat})
+		var date = Date.now()
+		var timestamp = format_timestamp(date)
+		var previous_el = $('#messages li').last()
+    	var previous_timestamp = previous_el.find('.message_timestamp').data('timestamp')
+
+		if (date - previous_timestamp <= 30000 && previous_el.hasClass('sent')) {
+
+			if (previous_el.hasClass('connected_up')) {
+				previous_el.removeClass('connected_up')
+				previous_el.addClass('connected')	
+			} else {
+				previous_el.addClass('connected_down')
+			}
+
+			new_content ='<li class="sent connected_up"><span class="message">'+ message +'<span class="message_timestamp" data-timestamp="'+ date +'">'+ timestamp +'</span></span></li>'
+		} else {
+    		new_content ='<li class="sent"><span class="message">'+ message +'<span class="message_timestamp" data-timestamp="'+ date +'">'+ timestamp +'</span></span></li>'
+    	}
+
+    	$('#messages').append(new_content)
+
+    	socket.emit('private message', {msg: message, chat_id: active_chat.chat_id, recipient_id: active_chat.recipient_id})
+    	$('.friends_list li[data-id="'+ active_chat.recipient_id +'"]').children('.last_message').text('You: '+ message)
     } else {
     	socket.emit('chat message', message)
     }
+	$('#messages').scrollTop($('#messages').prop('scrollHeight'))
     $('#m').val('')
     return false
 }) 
@@ -24,13 +44,20 @@ $('form').submit(function() {
 
 // Change active chat
 $('aside li').on('click', function() {
+	first_run = true
 	var active_chat_username = $(this).children('.username').text()
-	active_chat = $(this).data('id')
+	active_chat = {
+		chat_id: $(this).data('chatId'),
+		recipient_id: $(this).data('id')
+	}
+
 	//history.pushState(null, null, active_chat)
 	$('.chatting_with').text(active_chat_username)
 	$('.active_chat').removeClass('active_chat')
 	$(this).addClass('active_chat')
-	$('aside li[data-id="'+ active_chat +'"]').children('.last_message').removeClass('last_message-unread')
+	$('aside li[data-chat-id="'+ active_chat.chat_id +'"]').children('.last_message').removeClass('last_message-unread')
+
+	socket.emit('retrieve_messages', {chat_id: active_chat.chat_id})
 
 	$('#m').focus()
 	//socket.emit('leave', {username: '<$= username $>'})
@@ -161,4 +188,13 @@ $('.notifications .decline_request').on('click', function(event) {
 	event.stopPropagation()
 	$(this).parent().append('<div class="loading_div"></div>')
 	socket.emit('decline_friend_request', $(this).parents('li').first().data('id') )
+})
+
+var lock
+$('#messages').on('scroll', function() {
+	if ( $('#messages').prop('scrollTop') < 300 && !lock) {
+		lock = true
+		$('#messages').prepend('<li class="loading"><div class="loading_div"></div></li>')
+		socket.emit('retrieve_messages', {chat_id: active_chat.chat_id, last_timestamp: last_timestamp})
+	}
 })
