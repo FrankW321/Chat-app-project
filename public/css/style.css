@@ -272,7 +272,7 @@ header {
     background : #238298;
 }
 
-#open_settings_panel, #open_notification_panel {
+#open_settings_panel, #open_group_creation_panel, #open_notification_panel {
     cursor : pointer;
 }
 
@@ -284,7 +284,7 @@ header {
     font-size : 15px;
 }
 
-.settings, .notifications {
+.settings, .notifications, .group_creation {
     position   : absolute;
     display    : none;
     top        : 0;
@@ -413,6 +413,32 @@ aside {
 aside::-webkit-scrollbar {
     width : 0px;
     background: transparent; /* make scrollbar transparent */
+}
+
+#guide_1 {
+    position  : absolute;
+    left      : 15px;
+
+    font-size : 18px;
+}
+
+#guide_1 img {
+    width     : 50px;
+    transform : rotate(90deg);
+}
+
+#guide_2 {
+    position  : absolute;
+    display   : flex;
+    bottom    : 50px;
+    left      : 15px;
+
+    font-size : 18px;
+}
+
+#guide_2 img {
+    height : 50px;
+    width  : 50px;
 }
 
 aside li {

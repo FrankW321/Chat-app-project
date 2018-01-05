@@ -31,10 +31,12 @@ $('form').submit(function() {
 
     	$('#messages').append(new_content)
 
-    	socket.emit('private message', {msg: message, chat_id: active_chat.chat_id, recipient_id: active_chat.recipient_id})
+    	socket.emit('private_message', {msg: message, chat_id: active_chat.chat_id, recipient_id: active_chat.recipient_id})
     	$('.friends_list li[data-id="'+ active_chat.recipient_id +'"]').children('.last_message').text('You: '+ message)
     } else {
-    	socket.emit('chat message', message)
+    	var timestamp = Date.now()
+    	$('#messages').append('<li class="sent"><span class="message">'+ message +'<span class="message_timestamp">'+ format_timestamp(timestamp) +'</span></span></li>')
+    	socket.emit('chat_message', {msg: message, from: user.id})
     }
 	$('#messages').scrollTop($('#messages').prop('scrollHeight'))
     $('#m').val('')
@@ -43,27 +45,33 @@ $('form').submit(function() {
 
 
 // Change active chat
-$('aside li').on('click', function() {
-	first_run = true
-	var active_chat_username = $(this).children('.username').text()
-	active_chat = {
-		chat_id: $(this).data('chatId'),
-		recipient_id: $(this).data('id')
-	}
+function friend_list_click_handler() {
+	$('aside li').off()
 
-	//history.pushState(null, null, active_chat)
-	$('.chatting_with').text(active_chat_username)
-	$('.active_chat').removeClass('active_chat')
-	$(this).addClass('active_chat')
-	$('aside li[data-chat-id="'+ active_chat.chat_id +'"]').children('.last_message').removeClass('last_message-unread')
+	$('aside li').on('click', function() {
+		first_run = true
+		var active_chat_username = $(this).children('.username').text()
+		active_chat = {
+			chat_id: $(this).data('chatId'),
+			recipient_id: $(this).data('id')
+		}
 
-	socket.emit('retrieve_messages', {chat_id: active_chat.chat_id})
+		//history.pushState(null, null, active_chat)
+		$('.chatting_with').text(active_chat_username)
+		$('.active_chat').removeClass('active_chat')
+		$(this).addClass('active_chat')
+		$('aside li[data-chat-id="'+ active_chat.chat_id +'"]').children('.last_message').removeClass('last_message-unread')
 
-	$('#m').focus()
-	//socket.emit('leave', {username: '<$= username $>'})
-	$('#messages').empty()
-  	//socket.emit('join', {username: active_chat})
-})
+		socket.emit('retrieve_messages', {chat_id: active_chat.chat_id})
+
+		$('#m').focus()
+		//socket.emit('leave', {username: '<$= username $>'})
+		$('#messages').empty()
+	  	//socket.emit('join', {username: active_chat})
+	})
+}
+
+friend_list_click_handler()
 
 
 // Toggle dropdown
@@ -171,24 +179,30 @@ function attach_click_handlers() {
 		event.stopPropagation()
 		$(this).append('<div class="loading_div"></div>')
 		console.log($(this).parent().data('id'))
-		socket.emit('friend_request', $(this).parent().data('id') )
+		socket.emit('friend_request', {id: $(this).parent().data('id'), username: $(this).parent().text()} )
 	})
 }
 
 
-// Accept friend request
-$('.notifications .accept_request').on('click', function(event) {
-	event.stopPropagation()
-	$(this).parent().append('<div class="loading_div"></div>')
-	socket.emit('accept_friend_request', $(this).parents('li').first().data('id') )
-})
+function attach_friend_request_click_handlers() {
+	$('.notifications .accept_request, .notifications .decline_request').off()
 
-// Decline friend request
-$('.notifications .decline_request').on('click', function(event) {
-	event.stopPropagation()
-	$(this).parent().append('<div class="loading_div"></div>')
-	socket.emit('decline_friend_request', $(this).parents('li').first().data('id') )
-})
+	// Accept friend request
+	$('.notifications .accept_request').on('click', function(event) {
+		event.stopPropagation()
+		$(this).parent().append('<div class="loading_div"></div>')
+		socket.emit('accept_friend_request', {id: $(this).parents('li').first().data('id'), username: $(this).parents('li').first().text()} )
+	})
+
+	// Decline friend request
+	$('.notifications .decline_request').on('click', function(event) {
+		event.stopPropagation()
+		$(this).parent().append('<div class="loading_div"></div>')
+		socket.emit('decline_friend_request', $(this).parents('li').first().data('id') )
+	})
+}
+
+attach_friend_request_click_handlers()
 
 var lock
 $('#messages').on('scroll', function() {

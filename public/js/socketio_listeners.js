@@ -13,8 +13,10 @@ socket.on('disconnect', function() {
 
 // Receive general messages
 socket.on('chat_message', function(data) {
-    var timestamp = format_timestamp(data.date)
-    $('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ timestamp +'</span></span></li>')
+	if (data.from != user.id) {
+    	var timestamp = format_timestamp(data.date)
+    	$('#messages').append('<li><span class="message">'+ data.msg +'<span class="message_timestamp">'+ timestamp +'</span></span></li>')
+    }
 	var true_el_height = $('#messages')[0].scrollHeight
 	var el_height = $('#messages').height()
 	var pos_from_bottom = true_el_height - el_height - $('#messages').prop('scrollTop')
@@ -167,6 +169,38 @@ socket.on('friend_request_feedback', function(data) {
 	} else {
 		$('.search_results li[data-id="'+ data.recipient_id +'"]').find('.loading_div').remove()
 	}
+})
+
+
+// Receive friend request
+socket.on('friend_request', function(from) {
+	$('.notifications ul').append('<li data-id="'+ from.id +'">'+ from.username +'<div><div><img src="images/ic_person_add_white_24px.svg" class="accept_request" alt="accept friend request"></div><div><img src="images/ic_remove_circle_white_24px.svg" class="decline_request" alt="decline friend request"></div></div></li>')
+
+	var notification_count_el = $('.notification_count')
+
+	if (notification_count_el.length > 0) {
+		var count = parseInt(notification_count_el.text())
+		count++
+		notification_count_el.text(count)
+	} else {
+		$('.dropdown_link').append('<span class="notification_count">1</span>')
+	}
+
+	attach_friend_request_click_handlers()
+})
+
+
+//
+socket.on('new_friend', function(friend) {
+	$('.friends_list').prepend('<li data-id="'+ friend.id +'" data-chat-id="'+ friend.chat +'">'+
+		'<img src="http://via.placeholder.com/50/CCCCCC/000000?text='+ friend.username.charAt(0) +'">'+
+		'<span class="username">'+ friend.username +'</span>'+
+		'<span class="last_message">Friend request accepted</span>'+
+	'</li>')
+
+	$('#guide_1, #guide_2').remove()
+
+	friend_list_click_handler()
 })
 
 

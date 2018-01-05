@@ -12,9 +12,10 @@
     "express-handlebars": "^3.0.0",
     "express-messages": "^1.0.1",
     "express-session": "^1.15.6",
-    "mongoose": "^4.13.3",
+    "mongoose": "^4.13.8",
     "morgan": "^1.9.0",
     "mysql": "^2.14.1",
+    "nodemon": "^1.14.7",
     "passport": "^0.4.0",
     "passport-http": "^0.3.0",
     "passport-local": "^1.0.0",
@@ -22,5 +23,8 @@
     "path": "^0.12.7",
     "request-context": "^2.0.0",
     "socket.io": "^1.7.4"
+  },
+   "scripts": {
+    "start": "nodemon index.js"
   }
 }

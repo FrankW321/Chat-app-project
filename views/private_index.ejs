@@ -53,8 +53,28 @@
 					</ul>
 				</div>
 
+				<div class="group_creation">
+					<h2>Create a group</h2>
+
+					<label>
+						Group name
+						<input type="text" name="group_name">
+					</label>
+
+					<label>
+						Invite members
+						<input type="text" name="members">
+					</label>
+
+					<div class="feedback_message"></div>
+
+					<button id="save_settings" class="button button_green">Create</button>
+					<button id="discard_settings" class="button button_red">Discard</button>
+				</div>
+
 				<ul>
 					<li id="open_notification_panel">Notifications</li>
+					<li id="open_group_creation_panel">Create a new group</li>
 					<li id="open_settings_panel">Settings</li>
 				</ul>
 				<a href="/logout"><button class="button button_red">Logout</button></a>
@@ -79,6 +99,10 @@
 					</span>
 				</li>
 			<$ }) $>
+			<$ if(user.friends.length == 0) { $>
+				<span id="guide_1"><img src="images/ic_call_received_white_24px.svg">Menu is up here</span>
+				<span id="guide_2"><img src="images/ic_call_received_white_24px.svg">Add contacts here</span>
+			<$ } $>
 		</ul>
 
 		<div class="search_results">
